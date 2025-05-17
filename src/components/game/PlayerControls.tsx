@@ -10,6 +10,7 @@ import { useBlockStore } from '@lib/blocks/store';
 const WALK_SPEED = 10;
 const JUMP_FORCE = 6;
 const CAMERA_HEIGHT = 2.0; // 2.5 blocks felt too high
+const SPHERE_RADIUS = 0.5;
 
 export default function PlayerControls() {
   const { camera } = useThree();
@@ -23,13 +24,13 @@ export default function PlayerControls() {
   const blocks = useBlockStore((s) => s.blocks);
   const spawnY = useMemo(() => {
     const column = blocks.filter((b) => b.position[0] === SPAWN_X && b.position[2] === SPAWN_Z);
-    const top = column.reduce((max, b) => Math.max(max, b.position[1] + 0.5), 0.5); // default plane height 0.5
-    return top + CAMERA_HEIGHT + 2; // 2 extra units above head height
+    const top = column.reduce((max, b) => Math.max(max, b.position[1] + SPHERE_RADIUS), SPHERE_RADIUS);
+    return top + SPHERE_RADIUS; // spawn sphere just above block top
   }, [blocks]);
 
   const [ref, api] = useSphere(() => ({
     mass: 1,
-    args: [0.5],
+    args: [SPHERE_RADIUS],
     position: [SPAWN_X, spawnY, SPAWN_Z],
     fixedRotation: true,
     linearDamping: 0,
