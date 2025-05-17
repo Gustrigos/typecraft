@@ -78,10 +78,16 @@ export default function PlayerControls() {
     };
   }, []);
 
-  const velocity = useRef<[number, number, number]>([0,0,0]);
-  const position = useRef<[number, number, number]>([0,0,0]);
-  useEffect(() => api.velocity.subscribe((v) => (velocity.current = v)), []);
-  useEffect(() => api.position.subscribe((p) => (position.current = p)), []);
+  const velocity = useRef<[number, number, number]>([0, 0, 0]);
+  const position = useRef<[number, number, number]>([0, 0, 0]);
+  useEffect(() => {
+    const unsubscribe = api.velocity.subscribe((v) => (velocity.current = v));
+    return unsubscribe;
+  }, [api.velocity]);
+  useEffect(() => {
+    const unsubscribe = api.position.subscribe((p) => (position.current = p));
+    return unsubscribe;
+  }, [api.position]);
 
   // Reuse vector instances to avoid per-frame allocations
   const forwardRef = useRef(new Vector3());
