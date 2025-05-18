@@ -1,6 +1,6 @@
 'use client';
 
-import { PointerLockControls } from '@react-three/drei';
+import { PointerLockControls, KeyboardControls, useKeyboardControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Vector3 } from 'three';
 import { useRef, useEffect, useMemo } from 'react';
@@ -14,8 +14,8 @@ const SPHERE_RADIUS = 0.5;
 
 export default function PlayerControls() {
   const { camera } = useThree();
-  const keys = useRef<{ [key: string]: boolean }>({});
   const jumpRequested = useRef(false);
+  const [subscribeKeys, getKeys] = useKeyboardControls();
   const lastJumpTime = useRef(0);
 
   const SPAWN_X = 0;
@@ -53,6 +53,17 @@ export default function PlayerControls() {
 
   const groundedUntil = useRef(0);
 
+  // Convert jump key presses to jump requests
+  useEffect(() => {
+    const unsub = subscribeKeys(
+      (state) => state.jump,
+      (value) => {
+        if (value) jumpRequested.current = true;
+      }
+    );
+    return () => unsub();
+  }, [subscribeKeys]);
+
   // Set camera to spawn height right after mount
   useEffect(() => {
     camera.position.set(SPAWN_X, spawnY + CAMERA_HEIGHT, SPAWN_Z);
@@ -60,45 +71,18 @@ export default function PlayerControls() {
     position.current = [SPAWN_X, spawnY, SPAWN_Z];
   }, [spawnY, camera]);
 
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      console.log('DEBUG keydown', e.code);
-      keys.current[e.code] = true;
-      if (e.code === 'Space') {
-        jumpRequested.current = true;
-      }
-    };
-    const up = (e: KeyboardEvent) => {
-      console.log('DEBUG keyup', e.code);
-      keys.current[e.code] = false;
-      if (e.code === 'Space') jumpRequested.current = false;
-    };
-    // Listen on both window and document (capture) to reliably catch key events
-    window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    document.addEventListener('keydown', down, { capture: true });
-    document.addEventListener('keyup', up, { capture: true });
-    return () => {
-      window.removeEventListener('keydown', down);
-      window.removeEventListener('keyup', up);
-      document.removeEventListener('keydown', down, { capture: true });
-      document.removeEventListener('keyup', up, { capture: true });
-    };
-  }, []);
 
   const velocity = useRef<[number, number, number]>([0, 0, 0]);
   const position = useRef<[number, number, number]>([0, 0, 0]);
   useEffect(() => {
     const unsubV = api.velocity.subscribe((v) => {
       velocity.current = v;
-      console.log('DEBUG subscribe velocity', v);
     });
     return () => unsubV();
   }, [api.velocity]);
   useEffect(() => {
     const unsubP = api.position.subscribe((p) => {
       position.current = p;
-      console.log('DEBUG subscribe position', p);
     });
     return () => unsubP();
   }, [api.position]);
@@ -111,14 +95,10 @@ export default function PlayerControls() {
   const lastForwardRef = useRef(new Vector3(0, 0, -1));
 
   useFrame(() => {
-    // DEBUG: log current keys object
-    console.log('DEBUG keys', keys.current);
-    const k = keys.current;
+    const { forward: moveForward, back: moveBack, left: moveLeft, right: moveRight } = getKeys();
 
-    // input axes
-    const moveX = (k['KeyD'] || k['ArrowRight'] ? 1 : 0) + (k['KeyA'] || k['ArrowLeft'] ? -1 : 0);
-    const moveZ = (k['KeyS'] || k['ArrowDown'] ? 1 : 0) + (k['KeyW'] || k['ArrowUp'] ? -1 : 0);
-    console.log('DEBUG moveX', moveX, 'moveZ', moveZ);
+    const moveX = (moveRight ? 1 : 0) + (moveLeft ? -1 : 0);
+    const moveZ = (moveBack ? 1 : 0) + (moveForward ? -1 : 0);
 
     // camera basis vectors
     const forward = forwardRef.current;
@@ -141,7 +121,6 @@ export default function PlayerControls() {
 
     let moving = dir.lengthSq() > 0;
     if (moving) {
-      console.log('DEBUG moving dir before normalize', dir.x, dir.y, dir.z);
       dir.normalize().multiplyScalar(WALK_SPEED);
     } else {
       dir.set(0, 0, 0);
@@ -151,7 +130,6 @@ export default function PlayerControls() {
     // Keep the body awake even when velocity is zero to avoid it falling asleep prematurely
     api.wakeUp?.();
     api.velocity.set(dir.x, velocity.current[1], dir.z);
-    console.log('DEBUG set velocity', [dir.x, velocity.current[1], dir.z]);
 
     // Jump once per key press when grounded
     const now = performance.now();
@@ -183,9 +161,17 @@ export default function PlayerControls() {
   }
 
   return (
-    <>
+    <KeyboardControls
+      map={[
+        { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
+        { name: 'back', keys: ['KeyS', 'ArrowDown'] },
+        { name: 'left', keys: ['KeyA', 'ArrowLeft'] },
+        { name: 'right', keys: ['KeyD', 'ArrowRight'] },
+        { name: 'jump', keys: ['Space'] },
+      ]}
+    >
       <PointerLockControls />
       <mesh ref={ref as any} visible={false} />
-    </>
+    </KeyboardControls>
   );
 } 
