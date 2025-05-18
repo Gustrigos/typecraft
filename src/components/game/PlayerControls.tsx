@@ -1,15 +1,16 @@
 'use client';
 
-import { PointerLockControls, KeyboardControls, useKeyboardControls } from '@react-three/drei';
+import { PointerLockControls, useKeyboardControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Vector3 } from 'three';
 import { useRef, useEffect, useMemo } from 'react';
 import { useSphere } from '@react-three/cannon';
 import { useBlockStore } from '@lib/blocks/store';
+import { createPortal } from 'react-dom';
 
 const WALK_SPEED = 10;
 const JUMP_FORCE = 6;
-const CAMERA_HEIGHT = 2.0; // 2.5 blocks felt too high
+const CAMERA_HEIGHT = 2.0; 
 const SPHERE_RADIUS = 0.5;
 
 export default function PlayerControls() {
@@ -25,7 +26,7 @@ export default function PlayerControls() {
   const spawnY = useMemo(() => {
     const column = blocks.filter((b) => b.position[0] === SPAWN_X && b.position[2] === SPAWN_Z);
     const top = column.reduce((max, b) => Math.max(max, b.position[1] + SPHERE_RADIUS), SPHERE_RADIUS);
-    return top + SPHERE_RADIUS; // spawn sphere just above block top
+    return top + SPHERE_RADIUS + 1; // spawn sphere just above block top (+1 for safety)
   }, [blocks]);
 
   const [ref, api] = useSphere(() => ({
@@ -94,6 +95,8 @@ export default function PlayerControls() {
   // Remember last valid horizontal forward so we can keep moving if the player looks straight up/down
   const lastForwardRef = useRef(new Vector3(0, 0, -1));
 
+  const keyState = getKeys();
+
   useFrame(() => {
     const { forward: moveForward, back: moveBack, left: moveLeft, right: moveRight } = getKeys();
 
@@ -151,27 +154,18 @@ export default function PlayerControls() {
 
     // Sync camera
     camera.position.set(position.current[0], position.current[1] + CAMERA_HEIGHT, position.current[2]);
+
+    // Debug: log velocity and position
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('Player velocity:', velocity.current, 'position:', position.current, 'keys:', getKeys());
+    }
   });
 
-  // Expose for debugging in console
-  // @ts-ignore
-  if (typeof window !== 'undefined') {
-    // @ts-ignore
-    window.playerApi = api;
-  }
-
   return (
-    <KeyboardControls
-      map={[
-        { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
-        { name: 'back', keys: ['KeyS', 'ArrowDown'] },
-        { name: 'left', keys: ['KeyA', 'ArrowLeft'] },
-        { name: 'right', keys: ['KeyD', 'ArrowRight'] },
-        { name: 'jump', keys: ['Space'] },
-      ]}
-    >
+    <>
       <PointerLockControls />
       <mesh ref={ref as any} visible={false} />
-    </KeyboardControls>
+    </>
   );
 } 

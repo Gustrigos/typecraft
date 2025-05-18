@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { Box, Edges } from '@react-three/drei';
 import { useBlockStore } from '@lib/blocks/store';
+import { useInventoryStore } from '@lib/inventory/store';
 
 interface BlockProps {
   id: string;
@@ -14,6 +15,8 @@ export default function Block({ id, position, type }: BlockProps) {
   const removeBlock = useBlockStore((s) => s.removeBlock);
   const addBlock = useBlockStore((s) => s.addBlock);
   const selectedId = useBlockStore((s) => s.selectedId);
+  const selectedType = useInventoryStore((s) => s.selectedType);
+  const consumeInvItem = useInventoryStore((s) => s.consumeItem);
 
   const handlePointerDown = (e: any) => {
     e.stopPropagation();
@@ -31,7 +34,9 @@ export default function Block({ id, position, type }: BlockProps) {
         position[1] + faceNormal.y,
         position[2] + faceNormal.z,
       ];
-      addBlock(newPos);
+      if (consumeInvItem(selectedType)) {
+        addBlock(newPos, selectedType);
+      }
     }
   };
 

@@ -10,23 +10,24 @@
     "type-check": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@react-three/cannon": "^6.6.0",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "next": "14.0.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "simplex-noise": "^4.0.1",
     "three": "^0.160.0",
-    "@react-three/fiber": "^8.18.0",
-    "@react-three/drei": "^9.122.0",
-    "@react-three/cannon": "^6.6.0",
-    "zustand": "^4.5.5",
-    "simplex-noise": "^4.0.1"
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
-    "@types/react": "^18.2.24",
+    "@tsconfig/next": "^2.0.3",
     "@types/node": "^20.10.0",
+    "@types/react": "^18.2.24",
+    "@types/react-dom": "^19.1.5",
     "@types/three": "^0.164.0",
     "eslint": "8.56.0",
     "eslint-config-next": "14.0.0",
-    "@tsconfig/next": "^2.0.3"
+    "typescript": "^5.3.3"
   }
-} 
+}

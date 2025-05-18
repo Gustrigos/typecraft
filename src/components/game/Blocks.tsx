@@ -3,14 +3,19 @@
 import React, { useRef, useMemo } from 'react';
 import { useBlockStore, BlockType } from '@lib/blocks/store';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Group, Raycaster, Vector2, InstancedMesh } from 'three';
+import { Group, Raycaster, Vector2, InstancedMesh, Texture } from 'three';
 import { Instances, Instance, Box, Edges } from '@react-three/drei';
+import { useBlockTextures } from '@lib/useBlockTextures';
+import { useInventoryStore } from '@lib/inventory/store';
 
 export default function Blocks() {
   const blocks = useBlockStore((s) => s.blocks);
   const setSelected = useBlockStore((s) => s.setSelected);
   const addBlock = useBlockStore((s) => s.addBlock);
   const removeBlock = useBlockStore((s) => s.removeBlock);
+  const textures = useBlockTextures();
+  const selectedType = useInventoryStore((s) => s.selectedType);
+  const consumeInvItem = useInventoryStore((s) => s.consumeItem);
   const groupRef = useRef<Group>(null!);
   const raycaster = useRef(new Raycaster());
   const frameCount = useRef(0);
@@ -90,14 +95,14 @@ export default function Blocks() {
   const renderInstances = (
     refs: React.MutableRefObject<InstancedMesh>,
     blocksArr: { id: string; position: [number, number, number]; type: BlockType }[],
-    materials: string[],
+    materials: Texture[],
     keyPrefix: string,
   ) =>
     blocksArr.length > 0 && (
       <Instances key={`${keyPrefix}-${blocksArr.length}`} ref={refs} limit={blocksArr.length} castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
-        {materials.map((c, i) => (
-          <meshStandardMaterial key={i} attach={`material-${i}`} color={c} />
+        {materials.map((c, i: number) => (
+          <meshStandardMaterial key={i} attach={`material-${i}`} map={c} />
         ))}
         {blocksArr.map((b) => (
           <Instance
@@ -120,7 +125,9 @@ export default function Blocks() {
                   b.position[1] + faceNormal.y,
                   b.position[2] + faceNormal.z,
                 ];
-                addBlock(newPos);
+                if (consumeInvItem(selectedType)) {
+                  addBlock(newPos, selectedType);
+                }
               }
             }}
           />
@@ -137,13 +144,13 @@ export default function Blocks() {
       {groundBlocks.length > 0 && (
         <Instances key={`ground-${groundBlocks.length}`} ref={groundMeshRef} limit={groundBlocks.length} castShadow receiveShadow>
           <boxGeometry args={[1, 1, 1]} />
-          {/* Per-face multi-material for grass (top green, others brown) */}
-          <meshStandardMaterial attach='material-0' color={'#8B4513'} />
-          <meshStandardMaterial attach='material-1' color={'#8B4513'} />
-          <meshStandardMaterial attach='material-2' color={'#228B22'} />
-          <meshStandardMaterial attach='material-3' color={'#8B4513'} />
-          <meshStandardMaterial attach='material-4' color={'#8B4513'} />
-          <meshStandardMaterial attach='material-5' color={'#8B4513'} />
+          {/* Per-face multi-material for grass using CanvasTextures */}
+          <meshStandardMaterial attach='material-0' map={textures.grassSide} />
+          <meshStandardMaterial attach='material-1' map={textures.grassSide} />
+          <meshStandardMaterial attach='material-2' map={textures.grassTop} />
+          <meshStandardMaterial attach='material-3' map={textures.grassSide} />
+          <meshStandardMaterial attach='material-4' map={textures.grassSide} />
+          <meshStandardMaterial attach='material-5' map={textures.grassSide} />
           {groundBlocks.map((b) => (
             <Instance
               key={b.id}
@@ -167,7 +174,9 @@ export default function Blocks() {
                     b.position[1] + faceNormal.y,
                     b.position[2] + faceNormal.z,
                   ];
-                  addBlock(newPos);
+                  if (consumeInvItem(selectedType)) {
+                    addBlock(newPos, selectedType);
+                  }
                 }
               }}
             />
@@ -176,10 +185,22 @@ export default function Blocks() {
       )}
 
       {/* Instanced meshes for non-ground blocks */}
-      {renderInstances(grassMeshRef, grassBlocks, ['#8B4513', '#8B4513', '#3CB043', '#8B4513', '#8B4513', '#8B4513'], 'grass')}
-      {renderInstances(dirtMeshRef, dirtBlocks, Array(6).fill('#A0522D'), 'dirt')}
-      {renderInstances(stoneMeshRef, stoneBlocks, Array(6).fill('#808080'), 'stone')}
-      {renderInstances(sandMeshRef, sandBlocks, Array(6).fill('#F4E2B5'), 'sand')}
+      {renderInstances(
+        grassMeshRef,
+        grassBlocks,
+        [
+          textures.grassSide,
+          textures.grassSide,
+          textures.grassTop,
+          textures.grassSide,
+          textures.grassSide,
+          textures.grassSide,
+        ],
+        'grass',
+      )}
+      {renderInstances(dirtMeshRef, dirtBlocks, Array(6).fill(textures.dirt), 'dirt')}
+      {renderInstances(stoneMeshRef, stoneBlocks, Array(6).fill(textures.stone), 'stone')}
+      {renderInstances(sandMeshRef, sandBlocks, Array(6).fill(textures.sand), 'sand')}
 
       {/* Highlight selected block with an overlay wireframe */}
       {selectedBlock && (

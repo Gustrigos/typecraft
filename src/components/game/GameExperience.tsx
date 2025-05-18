@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { Sky } from '@react-three/drei';
+import { Sky, KeyboardControls } from '@react-three/drei';
 import { Physics, usePlane } from '@react-three/cannon';
 import World from './World';
 import Blocks from './Blocks';
@@ -30,7 +30,17 @@ export default function GameExperience() {
         <World />
         <Blocks />
         <PhysicsBlocks />
-        <PlayerControls />
+        <KeyboardControls
+          map={[
+            { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
+            { name: 'back', keys: ['KeyS', 'ArrowDown'] },
+            { name: 'left', keys: ['KeyA', 'ArrowLeft'] },
+            { name: 'right', keys: ['KeyD', 'ArrowRight'] },
+            { name: 'jump', keys: ['Space'] },
+          ]}
+        >
+          <PlayerControls />
+        </KeyboardControls>
       </Physics>
 
       {/* Player controls (pointer lock) handled above */}
