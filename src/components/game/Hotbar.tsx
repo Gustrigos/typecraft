@@ -4,12 +4,16 @@ import React, { useEffect } from 'react';
 import { useInventoryStore } from '@lib/inventory/store';
 import { BlockType } from '@lib/blocks/store';
 
-const BLOCK_TYPES: BlockType[] = ['grass', 'dirt', 'stone', 'sand'];
+const BLOCK_TYPES: BlockType[] = ['grass', 'dirt', 'stone', 'sand', 'wood', 'leaves', 'water'];
 const COLOR_MAP: Record<BlockType, string> = {
   grass: '#3CB043',
   dirt: '#A0522D',
   stone: '#808080',
   sand: '#F4E2B5',
+  wood: '#8B5A2B',
+  leaves: '#3CB043',
+  water: '#3DAEF5',
+  bedrock: '#4B4B4B',
 };
 
 export default function Hotbar() {

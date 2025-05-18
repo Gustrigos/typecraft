@@ -78,6 +78,39 @@ export function useBlockTextures() {
       addNoise(ctx, base, 30);
     });
 
-    return { grassTop, grassSide, dirt, stone, sand };
+    const water = createTexture((ctx) => {
+      const base = '#3DAEF5';
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      addNoise(ctx, base, 20);
+    });
+
+    const wood = createTexture((ctx) => {
+      const base = '#8B5A2B';
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      // simple vertical stripes to hint bark
+      ctx.fillStyle = shadeColor(base, -10);
+      for (let x = 0; x < size; x += 4) {
+        ctx.fillRect(x, 0, 2, size);
+      }
+      addNoise(ctx, base, 15);
+    });
+
+    const leaves = createTexture((ctx) => {
+      const base = '#3CB043';
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      addNoise(ctx, base, 50);
+    });
+
+    const bedrock = createTexture((ctx) => {
+      const base = '#4B4B4B';
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      addNoise(ctx, base, 60);
+    });
+
+    return { grassTop, grassSide, dirt, stone, sand, water, wood, leaves, bedrock };
   }, []);
 } 

@@ -49,6 +49,14 @@ export default function Blocks() {
           nextSelected = stoneBlocks[idx]?.id ?? null;
         } else if (hitObject === sandMeshRef.current) {
           nextSelected = sandBlocks[idx]?.id ?? null;
+        } else if (hitObject === waterMeshRef.current) {
+          nextSelected = waterBlocks[idx]?.id ?? null;
+        } else if (hitObject === woodMeshRef.current) {
+          nextSelected = woodBlocks[idx]?.id ?? null;
+        } else if (hitObject === leafMeshRef.current) {
+          nextSelected = leafBlocks[idx]?.id ?? null;
+        } else if (hitObject === bedrockMeshRef.current) {
+          nextSelected = bedrockBlocks[idx]?.id ?? null;
         }
       } else {
         // Regular mesh block
@@ -73,6 +81,10 @@ export default function Blocks() {
       dirt: [],
       stone: [],
       sand: [],
+      water: [],
+      wood: [],
+      leaves: [],
+      bedrock: [],
     } as any;
     blocks.forEach((b) => {
       if (!(b.position[1] === 0.5 && b.type === 'grass')) {
@@ -82,7 +94,16 @@ export default function Blocks() {
     return groups;
   }, [blocks]);
 
-  const { grass: grassBlocks, dirt: dirtBlocks, stone: stoneBlocks, sand: sandBlocks } = groupedByType;
+  const {
+    grass: grassBlocks,
+    dirt: dirtBlocks,
+    stone: stoneBlocks,
+    sand: sandBlocks,
+    water: waterBlocks,
+    wood: woodBlocks,
+    leaves: leafBlocks,
+    bedrock: bedrockBlocks,
+  } = groupedByType;
 
   // Keep refs to each instanced mesh so we can map intersection → block id
   const groundMeshRef = useRef<InstancedMesh>(null!);
@@ -90,6 +111,10 @@ export default function Blocks() {
   const dirtMeshRef = useRef<InstancedMesh>(null!);
   const stoneMeshRef = useRef<InstancedMesh>(null!);
   const sandMeshRef = useRef<InstancedMesh>(null!);
+  const waterMeshRef = useRef<InstancedMesh>(null!);
+  const woodMeshRef = useRef<InstancedMesh>(null!);
+  const leafMeshRef = useRef<InstancedMesh>(null!);
+  const bedrockMeshRef = useRef<InstancedMesh>(null!);
 
   // Helper to render a generic instanced group for a specific set of blocks & materials
   const renderInstances = (
@@ -201,6 +226,10 @@ export default function Blocks() {
       {renderInstances(dirtMeshRef, dirtBlocks, Array(6).fill(textures.dirt), 'dirt')}
       {renderInstances(stoneMeshRef, stoneBlocks, Array(6).fill(textures.stone), 'stone')}
       {renderInstances(sandMeshRef, sandBlocks, Array(6).fill(textures.sand), 'sand')}
+      {renderInstances(waterMeshRef, waterBlocks, Array(6).fill(textures.water), 'water')}
+      {renderInstances(woodMeshRef, woodBlocks, Array(6).fill(textures.wood), 'wood')}
+      {renderInstances(leafMeshRef, leafBlocks, Array(6).fill(textures.leaves), 'leaves')}
+      {renderInstances(bedrockMeshRef, bedrockBlocks, Array(6).fill(textures.bedrock), 'bedrock')}
 
       {/* Highlight selected block with an overlay wireframe */}
       {selectedBlock && (
