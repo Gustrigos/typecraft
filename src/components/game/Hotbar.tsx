@@ -12,7 +12,7 @@ const COLOR_MAP: Record<BlockType, string> = {
   sand: '#F4E2B5',
   wood: '#8B5A2B',
   leaves: '#3CB043',
-  water: '#3DAEF5',
+  water: '#117cbf',
   bedrock: '#4B4B4B',
 };
 

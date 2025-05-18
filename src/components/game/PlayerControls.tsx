@@ -95,8 +95,6 @@ export default function PlayerControls() {
   // Remember last valid horizontal forward so we can keep moving if the player looks straight up/down
   const lastForwardRef = useRef(new Vector3(0, 0, -1));
 
-  const keyState = getKeys();
-
   useFrame(() => {
     const { forward: moveForward, back: moveBack, left: moveLeft, right: moveRight } = getKeys();
 
@@ -154,12 +152,6 @@ export default function PlayerControls() {
 
     // Sync camera
     camera.position.set(position.current[0], position.current[1] + CAMERA_HEIGHT, position.current[2]);
-
-    // Debug: log velocity and position
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('Player velocity:', velocity.current, 'position:', position.current, 'keys:', getKeys());
-    }
   });
 
   return (

@@ -79,7 +79,7 @@ export function useBlockTextures() {
     });
 
     const water = createTexture((ctx) => {
-      const base = '#3DAEF5';
+      const base = '#117cbf';
       ctx.fillStyle = base;
       ctx.fillRect(0, 0, size, size);
       addNoise(ctx, base, 20);
@@ -98,7 +98,7 @@ export function useBlockTextures() {
     });
 
     const leaves = createTexture((ctx) => {
-      const base = '#3CB043';
+      const base = '#258a2c';
       ctx.fillStyle = base;
       ctx.fillRect(0, 0, size, size);
       addNoise(ctx, base, 50);

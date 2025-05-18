@@ -30,17 +30,7 @@ export default function GameExperience() {
         <World />
         <Blocks />
         <PhysicsBlocks />
-        <KeyboardControls
-          map={[
-            { name: 'forward', keys: ['KeyW', 'ArrowUp'] },
-            { name: 'back', keys: ['KeyS', 'ArrowDown'] },
-            { name: 'left', keys: ['KeyA', 'ArrowLeft'] },
-            { name: 'right', keys: ['KeyD', 'ArrowRight'] },
-            { name: 'jump', keys: ['Space'] },
-          ]}
-        >
-          <PlayerControls />
-        </KeyboardControls>
+        <PlayerControls />
       </Physics>
 
       {/* Player controls (pointer lock) handled above */}
