@@ -6,7 +6,7 @@ import { Physics, usePlane } from '@react-three/cannon';
 import World from './World';
 import Blocks from './Blocks';
 import PlayerControls from './PlayerControls';
-import PhysicsBlocks from './PhysicsBlocks';
+import NearPhysicsBlocks from './NearPhysicsBlocks';
 
 function PhysicsGround() {
   usePlane(() => ({ args: [100, 100], rotation: [-Math.PI / 2, 0, 0], position: [0, 0, 0] }));
@@ -29,7 +29,7 @@ export default function GameExperience() {
         {/* Game world */}
         <World />
         <Blocks />
-        <PhysicsBlocks />
+        <NearPhysicsBlocks />
         <PlayerControls />
       </Physics>
 

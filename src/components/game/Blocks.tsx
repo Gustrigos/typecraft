@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useBlockStore, BlockType } from '@lib/blocks/store';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Group, Raycaster, Vector2, InstancedMesh, Texture } from 'three';
@@ -21,6 +21,14 @@ export default function Blocks() {
   const frameCount = useRef(0);
   const lastSelected = useRef<string | null>(null);
   const { camera } = useThree();
+
+  useEffect(() => {
+    const log = (e: KeyboardEvent) => console.log('keydown', e.code);
+    const up  = (e: KeyboardEvent) => console.log('keyup', e.code);
+    document.addEventListener('keydown', log);
+    document.addEventListener('keyup', up);
+    return () => { document.removeEventListener('keydown', log); document.removeEventListener('keyup', up); };
+  }, []);
 
   useFrame(() => {
     // Throttle raycasting to every other frame to save some CPU
