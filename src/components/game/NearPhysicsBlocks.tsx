@@ -5,13 +5,26 @@ import { usePlayerStore } from '@store/playerStore';
 import { useCompoundBody } from '@react-three/cannon';
 import { useMemo } from 'react';
 
+const CHUNK_SIZE = 16; // Keep in sync with block store
+
 export default function NearPhysicsBlocks({ radius = 6 }: { radius?: number }) {
   const blocks = useBlockStore((s) => s.blocks);
   const playerPos = usePlayerStore((s) => s.position);
 
+  const chunkX = Math.floor(playerPos[0] / CHUNK_SIZE);
+  const chunkZ = Math.floor(playerPos[2] / CHUNK_SIZE);
+
+  // coarse grid quantisation (4-block cells) so we update shapes when player
+  // has moved a noticeable distance even within the same chunk
+  const gridX = Math.floor(playerPos[0] / 4);
+  const gridZ = Math.floor(playerPos[2] / 4);
+
   // Build a single compound body for nearby blocks
   const shapes = useMemo(() => {
     const [px, , pz] = playerPos;
+
+    // No-op: chunk quantisation is handled via the dependency array
+
     const r2 = radius * radius;
     // Partition nearby blocks into leaves and others
     const nearby = blocks.filter((b) => {
@@ -19,36 +32,17 @@ export default function NearPhysicsBlocks({ radius = 6 }: { radius?: number }) {
       const dz = b.position[2] - pz;
       return dx * dx + dz * dz <= r2;
     });
-    const leafBlocks = nearby.filter((b) => b.type === 'leaves');
-    const otherBlocks = nearby.filter((b) => b.type !== 'leaves');
+    // Exclude water and leaves from physics so the player can move through foliage and fluids
+    const otherBlocks = nearby.filter((b) => b.type !== 'leaves' && b.type !== 'water');
     const result: { type: 'Box'; args: [number, number, number]; position: [number, number, number] }[] = [];
     // individual shapes for non-leaf blocks
     otherBlocks.forEach((b) => {
       result.push({ type: 'Box', args: [1, 1, 1], position: b.position });
     });
-    // single aggregated shape for all leaves
-    if (leafBlocks.length > 0) {
-      let minX = Infinity, maxX = -Infinity;
-      let minY = Infinity, maxY = -Infinity;
-      let minZ = Infinity, maxZ = -Infinity;
-      leafBlocks.forEach((b) => {
-        minX = Math.min(minX, b.position[0]);
-        maxX = Math.max(maxX, b.position[0]);
-        minY = Math.min(minY, b.position[1]);
-        maxY = Math.max(maxY, b.position[1]);
-        minZ = Math.min(minZ, b.position[2]);
-        maxZ = Math.max(maxZ, b.position[2]);
-      });
-      const sizeX = maxX - minX + 1;
-      const sizeY = maxY - minY + 1;
-      const sizeZ = maxZ - minZ + 1;
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-      const centerZ = (minZ + maxZ) / 2;
-      result.push({ type: 'Box', args: [sizeX, sizeY, sizeZ], position: [centerX, centerY, centerZ] });
-    }
+    // leaves intentionally skipped to remain non-solid
+
     return result;
-  }, [blocks, playerPos, radius]);
+  }, [blocks, radius, chunkX, chunkZ, gridX, gridZ]);
 
   useCompoundBody(
     () => ({ mass: 0, shapes }),

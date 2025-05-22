@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import Crosshair from "@components/ui/Crosshair";
 import Hotbar from "@components/game/Hotbar";
+import FPSCounter from "@components/ui/FPSCounter";
+import GameMenu from "@components/game/GameMenu";
 import { KeyboardControls } from "@react-three/drei";
 
 const GameExperience = dynamic(
@@ -26,6 +28,8 @@ export default function HomePage() {
       <GameExperience />
       <Crosshair />
       <Hotbar />
+      <FPSCounter />
+      <GameMenu />
     </KeyboardControls>
   );
 } 

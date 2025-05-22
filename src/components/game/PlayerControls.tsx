@@ -9,7 +9,10 @@ import { useBlockStore } from '@lib/blocks/store';
 import { usePlayerStore } from '@store/playerStore';
 
 const WALK_SPEED = 10;
-const JUMP_FORCE = 6;
+// derive impulse from gravity and desired jump height (blocks)
+const GRAVITY = 9.81;
+const JUMP_HEIGHT = 1.2; // world units for one block jump
+const JUMP_FORCE = Math.sqrt(2 * GRAVITY * JUMP_HEIGHT);
 const CAMERA_HEIGHT = 2.0; 
 const SPHERE_RADIUS = 0.5;
 

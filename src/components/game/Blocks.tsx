@@ -1,18 +1,19 @@
 'use client';
 
 import React, { useRef, useMemo, useEffect } from 'react';
-import { useBlockStore, BlockType } from '@lib/blocks/store';
+import { useBlockStore as useBlockStoreImport, BlockType } from '@lib/blocks/store';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Group, Raycaster, Vector2, InstancedMesh, Texture } from 'three';
 import { Instances, Instance, Box, Edges } from '@react-three/drei';
 import { useBlockTextures } from '@lib/useBlockTextures';
 import { useInventoryStore } from '@lib/inventory/store';
+import { usePlayerStore } from '@store/playerStore';
 
 export default function Blocks() {
-  const blocks = useBlockStore((s) => s.blocks);
-  const setSelected = useBlockStore((s) => s.setSelected);
-  const addBlock = useBlockStore((s) => s.addBlock);
-  const removeBlock = useBlockStore((s) => s.removeBlock);
+  const blocks = useBlockStoreImport((s) => s.blocks);
+  const setSelected = useBlockStoreImport((s) => s.setSelected);
+  const addBlock = useBlockStoreImport((s) => s.addBlock);
+  const removeBlock = useBlockStoreImport((s) => s.removeBlock);
   const textures = useBlockTextures();
   const selectedType = useInventoryStore((s) => s.selectedType);
   const consumeInvItem = useInventoryStore((s) => s.consumeItem);
@@ -22,18 +23,15 @@ export default function Blocks() {
   const lastSelected = useRef<string | null>(null);
   const { camera } = useThree();
 
-  useEffect(() => {
-    const log = (e: KeyboardEvent) => console.log('keydown', e.code);
-    const up  = (e: KeyboardEvent) => console.log('keyup', e.code);
-    document.addEventListener('keydown', log);
-    document.addEventListener('keyup', up);
-    return () => { document.removeEventListener('keydown', log); document.removeEventListener('keyup', up); };
-  }, []);
+  const CHUNK_SIZE = 16; // keep in sync with block store
+
+  // Raycast every 4 frames (~15 fps @60hz) instead of 2
+  const RAYCAST_INTERVAL = 4;
 
   useFrame(() => {
-    // Throttle raycasting to every other frame to save some CPU
+    // Throttle raycasting
     frameCount.current++;
-    if (frameCount.current % 2 !== 0) return;
+    if (frameCount.current % RAYCAST_INTERVAL !== 0) return;
 
     if (!groupRef.current) return;
     raycaster.current.setFromCamera(new Vector2(0, 0), camera); // center of screen
@@ -79,6 +77,61 @@ export default function Blocks() {
     }
   });
 
+  // Animate water texture for flow effect
+  useFrame((_, delta) => {
+    textures.water.offset.x += delta * 0.1;
+    textures.water.offset.y += delta * 0.1;
+  });
+
+  // Water flow simulation: flow laterally and fall as waterfalls every 1.5s
+  const waterSimTimer = useRef(0);
+  const playerPosRef = useRef<[number, number, number]>([0, 0, 0]);
+  // keep playerPos updated cheaply without rerender subscription
+  useEffect(() => {
+    const unsub = usePlayerStore.subscribe((state) => {
+      playerPosRef.current = state.position;
+    });
+    return () => unsub();
+  }, []);
+
+  useFrame((_, delta) => {
+    waterSimTimer.current += delta;
+    if (waterSimTimer.current < 1.5) return; // run every 1.5s
+    waterSimTimer.current = 0;
+    const { blocks: allBlocks, addBlock, removeBlock, loadedChunks } = useBlockStoreImport.getState();
+    const isInsideLoaded = (x: number, z: number) =>
+      Boolean(loadedChunks[`${Math.floor(x / CHUNK_SIZE)}:${Math.floor(z / CHUNK_SIZE)}`]);
+    const occupied = new Set(allBlocks.map((b) => b.position.join(',')));
+    const [px, , pz] = playerPosRef.current;
+    const VIEW_R2 = 400; // Only simulate water within 20 blocks radius of player
+    allBlocks.forEach((b) => {
+      if (b.type === 'water') {
+        const [x, y, z] = b.position;
+        const dx = x - px;
+        const dz = z - pz;
+        if (dx * dx + dz * dz > VIEW_R2) return; // skip far water
+        const belowKey = [x, y - 1, z].join(',');
+        if (!occupied.has(belowKey) && isInsideLoaded(x, z)) {
+          removeBlock(b.id);
+          addBlock([x, y - 1, z], 'water');
+        } else {
+          // pick one random lateral direction per tick
+          const dirs = [
+            [x + 1, y, z],
+            [x - 1, y, z],
+            [x, y, z + 1],
+            [x, y, z - 1],
+          ];
+          const next = dirs[Math.floor(Math.random() * dirs.length)];
+          const key = next.join(',');
+          if (!occupied.has(key) && isInsideLoaded(next[0], next[2])) {
+            addBlock(next as [number, number, number], 'water');
+          }
+        }
+      }
+    });
+  });
+
   // Separate ground blocks which are static and always grass
   const groundBlocks = blocks.filter((b) => b.position[1] === 0.5 && b.type === 'grass');
 
@@ -113,6 +166,49 @@ export default function Blocks() {
     bedrock: bedrockBlocks,
   } = groupedByType;
 
+  // Cluster contiguous water blocks to remove internal borders
+  const waterClusters = useMemo(() => {
+    const visited = new Set<string>();
+    const posMap = new Map<string, [number, number, number]>();
+    waterBlocks.forEach((b) => posMap.set(b.position.join(','), b.position));
+    const clusters: { sizeX: number; sizeY: number; sizeZ: number; centerX: number; centerY: number; centerZ: number }[] = [];
+    waterBlocks.forEach((b) => {
+      const startKey = b.position.join(',');
+      if (visited.has(startKey)) return;
+      const queue = [startKey];
+      visited.add(startKey);
+      let [minX, minY, minZ] = b.position;
+      let [maxX, maxY, maxZ] = b.position;
+      while (queue.length) {
+        const key = queue.shift()!;
+        const [x, y, z] = posMap.get(key)!;
+        for (const [dx, dy, dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+          const nk = [x + dx, y + dy, z + dz].join(',');
+          if (posMap.has(nk) && !visited.has(nk)) {
+            visited.add(nk);
+            queue.push(nk);
+            const [nx, ny, nz] = posMap.get(nk)!;
+            minX = Math.min(minX, nx);
+            maxX = Math.max(maxX, nx);
+            minY = Math.min(minY, ny);
+            maxY = Math.max(maxY, ny);
+            minZ = Math.min(minZ, nz);
+            maxZ = Math.max(maxZ, nz);
+          }
+        }
+      }
+      clusters.push({
+        sizeX: maxX - minX + 1,
+        sizeY: maxY - minY + 1,
+        sizeZ: maxZ - minZ + 1,
+        centerX: (minX + maxX) / 2,
+        centerY: (minY + maxY) / 2,
+        centerZ: (minZ + maxZ) / 2,
+      });
+    });
+    return clusters;
+  }, [waterBlocks]);
+
   // Keep refs to each instanced mesh so we can map intersection → block id
   const groundMeshRef = useRef<InstancedMesh>(null!);
   const grassMeshRef = useRef<InstancedMesh>(null!);
@@ -135,7 +231,13 @@ export default function Blocks() {
       <Instances key={`${keyPrefix}-${blocksArr.length}`} ref={refs} limit={blocksArr.length} castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         {materials.map((c, i: number) => (
-          <meshStandardMaterial key={i} attach={`material-${i}`} map={c} />
+          <meshStandardMaterial
+            key={i}
+            attach={`material-${i}`}
+            map={c}
+            transparent={keyPrefix === 'water'}
+            opacity={keyPrefix === 'water' ? 0.6 : 1}
+          />
         ))}
         {blocksArr.map((b) => (
           <Instance
@@ -168,7 +270,7 @@ export default function Blocks() {
       </Instances>
     );
 
-  const selectedId = useBlockStore((s) => s.selectedId);
+  const selectedId = useBlockStoreImport((s) => s.selectedId);
   const selectedBlock = useMemo(() => blocks.find((b) => b.id === selectedId), [blocks, selectedId]);
 
   return (
@@ -234,7 +336,31 @@ export default function Blocks() {
       {renderInstances(dirtMeshRef, dirtBlocks, Array(6).fill(textures.dirt), 'dirt')}
       {renderInstances(stoneMeshRef, stoneBlocks, Array(6).fill(textures.stone), 'stone')}
       {renderInstances(sandMeshRef, sandBlocks, Array(6).fill(textures.sand), 'sand')}
-      {renderInstances(waterMeshRef, waterBlocks, Array(6).fill(textures.water), 'water')}
+      {waterClusters.map((c, i) => {
+        // shrink cluster slightly to prevent z-fighting with neighboring blocks
+        const eps = 0.02;
+        const sx = Math.max(c.sizeX - eps, 0);
+        const sy = Math.max(c.sizeY - eps, 0);
+        const sz = Math.max(c.sizeZ - eps, 0);
+        return (
+          <Box
+            key={`water-${i}`}
+            args={[sx, sy, sz]}
+            position={[c.centerX, c.centerY, c.centerZ]}
+            raycast={() => null}
+          >
+            <meshStandardMaterial
+              attach="material"
+              map={textures.water}
+              transparent
+              opacity={0.6}
+              polygonOffset
+              polygonOffsetFactor={-1}
+              polygonOffsetUnits={1}
+            />
+          </Box>
+        );
+      })}
       {renderInstances(woodMeshRef, woodBlocks, Array(6).fill(textures.wood), 'wood')}
       {renderInstances(leafMeshRef, leafBlocks, Array(6).fill(textures.leaves), 'leaves')}
       {renderInstances(bedrockMeshRef, bedrockBlocks, Array(6).fill(textures.bedrock), 'bedrock')}
